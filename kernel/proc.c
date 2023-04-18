@@ -18,7 +18,7 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
-extern char trampoline[]; // trampoline.S //
+extern char trampoline[]; // trampoline.S 
 
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
