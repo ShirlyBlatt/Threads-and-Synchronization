@@ -37,6 +37,8 @@ struct uthread {
     void* startFunc;                    //thread's start function
 };
 
+void freeThread(struct uthread* t);
+
 extern void uswtch(struct context*, struct context*);
 
 int uthread_create(void (*start_func)(), enum sched_priority priority);
