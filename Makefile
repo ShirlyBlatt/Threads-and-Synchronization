@@ -13,6 +13,7 @@ OBJS = \
   $K/main.o \
   $K/vm.o \
   $K/proc.o \
+  $K/kthread.o \
   $K/swtch.o \
   $K/trampoline.o \
   $K/trap.o \
@@ -87,7 +88,7 @@ $U/initcode: $U/initcode.S
 tags: $(OBJS) _init
 	etags *.S *.c
 
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o $U/uswtch.o $U/uthread.O
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o $U/uswtch.o $U/uthread.o 
 
 _%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
@@ -129,7 +130,6 @@ UPROGS=\
 	$U/_sh\
 	$U/_stressfs\
 	$U/_usertests\
-	$U/_uthread\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
