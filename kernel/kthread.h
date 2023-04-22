@@ -94,11 +94,11 @@ struct kthread
 
   //task 2.1
   struct spinlock ktLock; //maybe not spinlock ? TODO 
-  enum procstate ktState;      //thread's state
-  void *ktChan;                  // If non-zero, sleeping on chan
+  enum procstate ktState;         //thread's state
+  void *ktChan;                   // If non-zero, sleeping on chan
   int ktKilled;                   // If non-zero, have been killed
   int ktXstate;                   // Exit status to be returned to parent's wait
   int ktId;                       // threads ID
   struct proc *myprocess;         // The process that the thread belongs to
-  struct context ktContext;      // swtch() here to run process
+  struct context ktContext;       // swtch() here to run process
 };

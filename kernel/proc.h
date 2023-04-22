@@ -59,6 +59,6 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   //task2.2
-  int tidCounter;
-  struct spinlock tidLock;
+  int ktidCounter;
+  struct spinlock ktid_lock;
 };

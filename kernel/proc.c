@@ -12,6 +12,8 @@ struct proc proc[NPROC];
 
 struct proc *initproc;
 
+struct kthread *initkthread;
+
 int nextpid = 1;
 struct spinlock pid_lock;
 
@@ -124,6 +126,9 @@ allocproc(void)
   return 0;
 
 found:
+  p->ktidCounter = 1; //task2.2
+  allockthread(p);    //task2.2 //TODO
+
   p->pid = allocpid();
   p->state = USED;
 
@@ -151,7 +156,7 @@ found:
 
 
   // TODO: delte this after you are done with task 2.2
-  allocproc_help_function(p);
+  //allocproc_help_function(p);
   return p;
 }
 
@@ -166,6 +171,13 @@ freeproc(struct proc *p)
   p->base_trapframes = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  struct kthread *kt;
+  for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
+    acquire(&kt->ktLock);
+    if(kt->ktState != UNUSED)
+      freekthread(kt);
+    release(&kt->ktLock);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -256,7 +268,9 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  p->kthread[0].ktState = RUNNABLE; //task2.2
 
+  release(&p->kthread[0].ktLock);//task2.2
   release(&p->lock);
 }
 
@@ -287,7 +301,7 @@ fork(void)
 {
   int i, pid;
   struct proc *np;
-  struct proc *p = myproc();
+  struct proc *p = myproc();  
   struct kthread *kt = mykthread();
 
   // Allocate process.
@@ -302,6 +316,14 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+
+  //task2.2
+  np->kthread[0] = *allockthread(np);
+  if(&np->kthread[0] == 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
 
   // copy saved user registers.
   *(np->kthread[0].trapframe) = *(kt->trapframe);
@@ -319,6 +341,7 @@ fork(void)
 
   pid = np->pid;
 
+  release(&np->kthread[0].ktLock); //task2.2
   release(&np->lock);
 
   acquire(&wait_lock);
@@ -326,7 +349,10 @@ fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+  acquire(&np->kthread[0].ktLock);    //task2.2
   np->state = RUNNABLE;
+  np->kthread[0].ktState = RUNNABLE;  //task2.2
+  release(&np->kthread[0].ktLock);    //task2.2
   release(&np->lock);
 
   return pid;

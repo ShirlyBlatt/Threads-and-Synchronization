@@ -49,10 +49,16 @@ void freeThread(struct uthread* t){
     t->priority = priority;
     void * myStack = (void*)malloc(STACK_SIZE); //TODO
     t->ustack[0] = myStack; 
-    t->context.ra =(uint64)uthread_exit;
-    t->context.sp = (uint64)&(t->ustack[STACK_SIZE]);
-    t->context.sp -= sizeof(uint64);
-    *((uint64*)(t->context.sp)) = (uint64)start_func;
+    t->context.ra =(uint64)uthread_exit;                //TODO
+    t->context.sp = (uint64)&(t->ustack[STACK_SIZE]);   //TODO
+    t->context.sp -= sizeof(uint64);                    //TODO
+    *((uint64*)(t->context.sp)) = (uint64)start_func;   //TODO 
+
+    // memset(&t->context, 0, sizeof(t->context));
+    // t->context.ra = (uint64)start_func;
+    // t->context.sp = t->ustack + STACK_SIZE;
+
+
     t->state = RUNNABLE;
     numOfCUrrThreads++;
     return 0;
@@ -142,7 +148,7 @@ void freeThread(struct uthread* t){
         if(t != 0){
             t->state = RUNNING;
             currThread = t;
-            uswtch(0,&t->context); //TODO check if currect to put 0
+            uswtch(0,&t->context); //TODO check if currect to put 0 maybe put a defult null struct
         }
     }
     return -1;
