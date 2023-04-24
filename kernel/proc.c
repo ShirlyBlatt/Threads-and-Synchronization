@@ -88,7 +88,9 @@ myproc(void)
 {
   push_off();
   struct cpu *c = mycpu();
-  struct proc *p = c->proc;
+  //task2.2
+  struct kthread *kt = c->kthread;
+  struct proc *p = kt->myprocess;
   pop_off();
   return p;
 }
@@ -171,6 +173,7 @@ freeproc(struct proc *p)
   p->base_trapframes = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  //task2.2
   struct kthread *kt;
   for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
     acquire(&kt->ktLock);
@@ -487,25 +490,28 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  
-  c->proc = 0;
+
+ //task2.2 
+  c->kthread = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+      if(p->state == USED) {
+        //task2.2
+        struct kthread *kt;
+        for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){
+          acquire(&kt->ktLock);
+          if(kt->ktState == KTRUNNABLE){
+            kt->ktState = KTRUNNING;
+            c->kthread = kt;
+            swtch(&c->context, &kt->ktContext);
+            c->kthread = 0;
+          }
+          release(&kt->ktLock);
+        }
       }
       release(&p->lock);
     }
@@ -524,18 +530,20 @@ sched(void)
 {
   int intena;
   struct proc *p = myproc();
+  struct kthread *kt = mykthread();
 
   if(!holding(&p->lock))
     panic("sched p->lock");
   if(mycpu()->noff != 1)
     panic("sched locks");
-  if(p->state == RUNNING)
+    //task2.2
+  if(kt->ktState == KTRUNNING)
     panic("sched running");
   if(intr_get())
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
+  swtch(&kt->ktContext, &mycpu()->context);
   mycpu()->intena = intena;
 }
 
@@ -543,11 +551,16 @@ sched(void)
 void
 yield(void)
 {
-  struct proc *p = myproc();
-  acquire(&p->lock);
-  p->state = RUNNABLE;
+  //struct proc *p = myproc();
+  // acquire(&p->lock);
+  // p->state = RUNNABLE;
+  //task2.2
+  struct kthread *kt = mykthread();
+  acquire(&kt->ktLock);
+  kt->ktState = KTRUNNABLE;
   sched();
-  release(&p->lock);
+  release(&kt->ktLock);
+  //release(&p->lock);
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -712,9 +725,6 @@ procdump(void)
   static char *states[] = {
   [UNUSED]    "unused",
   [USED]      "used",
-  // [SLEEPING]  "sleep ",
-  // [RUNNABLE]  "runble",
-  // [RUNNING]   "run   ",
   [ZOMBIE]    "zombie"
   };
   struct proc *p;
