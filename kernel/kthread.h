@@ -73,7 +73,7 @@ struct context {
 
 // Per-CPU state. //task 2.1
 struct cpu {
-  struct proc *proc;           // The procces running on this cpu, or null.
+  //struct proc *proc;          // The procces running on this cpu, or null.
   struct kthread *kthread;    // The thread running on this cpu, or null.
   struct context context;     // swtch() here to enter scheduler().
   int noff;                   // Depth of push_off() nesting.
@@ -83,7 +83,7 @@ struct cpu {
 extern struct cpu cpus[NCPU];
 
 //task 2.1
-enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum kthreadstate { KTUNUSED, KTUSED, KTSLEEPING, KTRUNNABLE, KTRUNNING, KTZOMBIE };
 
 struct kthread
 {
@@ -93,8 +93,8 @@ struct kthread
   struct trapframe *trapframe;    // data page for trampoline.S
 
   //task 2.1
-  struct spinlock ktLock; //maybe not spinlock ? TODO 
-  enum procstate ktState;         //thread's state
+  struct spinlock ktLock;         //thread's lock
+  enum kthreadstate ktState;      //thread's state
   void *ktChan;                   // If non-zero, sleeping on chan
   int ktKilled;                   // If non-zero, have been killed
   int ktXstate;                   // Exit status to be returned to parent's wait

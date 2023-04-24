@@ -30,7 +30,7 @@
 
 // extern struct cpu cpus[NCPU];
 
-//enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum procstate { UNUSED, USED, ZOMBIE };
 
 // Per-process state
 struct proc {

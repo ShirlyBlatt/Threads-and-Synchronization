@@ -127,7 +127,7 @@ allocproc(void)
 
 found:
   p->ktidCounter = 1; //task2.2
-  allockthread(p);    //task2.2 //TODO
+  allockthread(p);    //task2.2
 
   p->pid = allocpid();
   p->state = USED;
@@ -174,7 +174,7 @@ freeproc(struct proc *p)
   struct kthread *kt;
   for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
     acquire(&kt->ktLock);
-    if(kt->ktState != UNUSED)
+    if(kt->ktState != KTUNUSED)
       freekthread(kt);
     release(&kt->ktLock);
   }
@@ -267,10 +267,10 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
-  p->state = RUNNABLE;
-  p->kthread[0].ktState = RUNNABLE; //task2.2
+  //p->state = RUNNABLE;
+  p->kthread[0].ktState = KTRUNNABLE; //task2.2
 
-  release(&p->kthread[0].ktLock);//task2.2
+  release(&p->kthread[0].ktLock);     //task2.2
   release(&p->lock);
 }
 
@@ -318,8 +318,7 @@ fork(void)
   np->sz = p->sz;
 
   //task2.2
-  np->kthread[0] = *allockthread(np);
-  if(&np->kthread[0] == 0){
+  if(&(np->kthread[0]) == 0){
     freeproc(np);
     release(&np->lock);
     return -1;
@@ -348,10 +347,10 @@ fork(void)
   np->parent = p;
   release(&wait_lock);
 
-  acquire(&np->lock);
+  acquire(&np->lock);                 //maybe we dont need ? //TODO
   acquire(&np->kthread[0].ktLock);    //task2.2
-  np->state = RUNNABLE;
-  np->kthread[0].ktState = RUNNABLE;  //task2.2
+  //np->state = RUNNABLE;
+  np->kthread[0].ktState = KTRUNNABLE;  //task2.2
   release(&np->kthread[0].ktLock);    //task2.2
   release(&np->lock);
 
@@ -410,6 +409,15 @@ exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+
+  //task 2.2
+  struct kthread *kt;
+  for (kt = p->kthread; kt < &p->kthread[NKT]; kt++) {
+    acquire(&kt->ktLock);
+    kt->ktState = status;     //TODO maybe we dont need
+    kt->ktState = KTZOMBIE;
+    release(&kt->ktLock);
+  }
 
   release(&wait_lock);
 
@@ -624,10 +632,20 @@ kill(int pid)
     acquire(&p->lock);
     if(p->pid == pid){
       p->killed = 1;
-      if(p->state == SLEEPING){
-        // Wake process from sleep().
-        p->state = RUNNABLE;
+      //task2.2
+      struct kthread *kt;
+      for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
+          acquire(&kt->ktLock);
+          kt->ktKilled = 1;
+          if(kt->ktState == KTSLEEPING){
+            kt->ktState = KTRUNNABLE;
+          }
+          release(&kt->ktLock);
       }
+      // if(p->state == SLEEPING){
+      //   // Wake process from sleep().
+      //   p->state = RUNNABLE;
+      // }
       release(&p->lock);
       return 0;
     }
@@ -694,9 +712,9 @@ procdump(void)
   static char *states[] = {
   [UNUSED]    "unused",
   [USED]      "used",
-  [SLEEPING]  "sleep ",
-  [RUNNABLE]  "runble",
-  [RUNNING]   "run   ",
+  // [SLEEPING]  "sleep ",
+  // [RUNNABLE]  "runble",
+  // [RUNNING]   "run   ",
   [ZOMBIE]    "zombie"
   };
   struct proc *p;
