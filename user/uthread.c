@@ -47,16 +47,17 @@ void freeThread(struct uthread* t){
     nextId++;
     t->startFunc = start_func;
     t->priority = priority;
-    void * myStack = (void*)malloc(STACK_SIZE); //TODO
-    t->ustack[0] = myStack; 
-    t->context.ra =(uint64)uthread_exit;                //TODO
-    t->context.sp = (uint64)&(t->ustack[STACK_SIZE]);   //TODO
-    t->context.sp -= sizeof(uint64);                    //TODO
-    *((uint64*)(t->context.sp)) = (uint64)start_func;   //TODO 
+    //void * myStack = (void*)malloc(STACK_SIZE); //TODO
+    // t->ustack[0] = myStack; 
+    // t->context.ra =(uint64)uthread_exit;                //TODO
+        //TODO
+    // t->context.sp -= sizeof(uint64);                    //TODO
+    // *((uint64*)(t->context.sp)) = (uint64)start_func;   //TODO 
 
-    // memset(&t->context, 0, sizeof(t->context));
-    // t->context.ra = (uint64)start_func;
-    // t->context.sp = t->ustack + STACK_SIZE;
+    memset(&t->context, 0, sizeof(t->context));
+    t->context.ra = (uint64)start_func;
+    t->context.sp = (uint64)&(t->ustack[STACK_SIZE]);
+    //t->context.sp = t->ustack + STACK_SIZE;
 
 
     t->state = RUNNABLE;

@@ -341,7 +341,7 @@ fork(void)
 
   pid = np->pid;
 
-  release(&np->kthread[0].ktLock); //task2.2
+  release(&np->kthread[0].ktLock);    //task2.2
   release(&np->lock);
 
   acquire(&wait_lock);
