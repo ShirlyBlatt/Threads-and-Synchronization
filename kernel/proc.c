@@ -438,6 +438,8 @@ wait(uint64 addr)
   int havekids, pid;
   struct proc *p = myproc();
 
+  int ppState;    //task2.2
+
   acquire(&wait_lock);
 
   for(;;){
@@ -446,20 +448,31 @@ wait(uint64 addr)
     for(pp = proc; pp < &proc[NPROC]; pp++){
       if(pp->parent == p){
         // make sure the child isn't still in exit() or swtch().
-        acquire(&pp->lock);
-
+        acquire(&pp->lock);                                  
+        struct kthread *kt = &pp->kthread[0];                //task2.2
+        acquire(&kt->ktLock);                                //task2.2
         havekids = 1;
-        if(pp->state == ZOMBIE){
+        if(pp->state == ZOMBIE && kt->ktState == KTZOMBIE){
           // Found one.
           pid = pp->pid;
+          ppState = pp->xstate;
           if(addr != 0 && copyout(p->pagetable, addr, (char *)&pp->xstate,
                                   sizeof(pp->xstate)) < 0) {
+            release(&kt->ktLock);           //task2.2
             release(&pp->lock);
             release(&wait_lock);
             return -1;
           }
           freeproc(pp);
+          release(&kt->ktLock);
           release(&pp->lock);
+
+          //task2.2
+          acquire(&p->lock);                //TODO
+          acquire(&(p->kthread[0].ktLock));
+          p->kthread[0].ktState = ppState;
+          release(&p->lock);
+          release(&(p->kthread[0].ktLock));
           release(&wait_lock);
           return pid;
         }
@@ -467,11 +480,19 @@ wait(uint64 addr)
       }
     }
 
+    //task2.2
+    acquire(&p->lock);                    //TODO
+    acquire(&(p->kthread[0].ktLock));
     // No point waiting if we don't have any children.
-    if(!havekids || killed(p)){
+    if(!havekids || p->kthread[0].ktKilled == 1){
+      release(&p->lock);
+      release(&(p->kthread[0].ktLock));
       release(&wait_lock);
       return -1;
     }
+    //task2.2
+    release(&p->lock);
+    release(&(p->kthread[0].ktLock));
     
     // Wait for a child to exit.
     sleep(p, &wait_lock);  //DOC: wait-sleep
@@ -529,15 +550,14 @@ void
 sched(void)
 {
   int intena;
-  struct proc *p = myproc();
+  //struct proc *p = myproc();
   struct kthread *kt = mykthread();
 
-  if(!holding(&p->lock))
-    panic("sched p->lock");
+  if(!holding(&kt->ktLock))          //task2.2
+    panic("sched kt->ktLock");
   if(mycpu()->noff != 1)
     panic("sched locks");
-    //task2.2
-  if(kt->ktState == KTRUNNING)
+  if(kt->ktState == KTRUNNING)      //task2.2
     panic("sched running");
   if(intr_get())
     panic("sched interruptible");
@@ -571,6 +591,7 @@ forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
+  release(&mykthread()->ktLock);      //task2.2
   release(&myproc()->lock);
 
   if (first) {
@@ -589,7 +610,8 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
-  struct proc *p = myproc();
+  //struct proc *p = myproc();
+  struct kthread *kt = mykthread(); //task2.2
   
   // Must acquire p->lock in order to
   // change p->state and then call sched.
@@ -598,20 +620,26 @@ sleep(void *chan, struct spinlock *lk)
   // (wakeup locks p->lock),
   // so it's okay to release lk.
 
-  acquire(&p->lock);  //DOC: sleeplock1
+  //acquire(&p->lock);  //DOC: sleeplock1
+  acquire(&kt->ktLock); //task2.2
   release(lk);
 
   // Go to sleep.
-  p->chan = chan;
-  p->state = SLEEPING;
+  // p->chan = chan;
+  // p->state = SLEEPING;
+
+  kt->ktChan = chan;         //task2.2
+  kt->ktXstate = KTSLEEPING; //task2.2
 
   sched();
 
   // Tidy up.
-  p->chan = 0;
+  //p->chan = 0;
+  kt->ktChan = 0;           //task2.2
 
   // Reacquire original lock.
-  release(&p->lock);
+  //release(&p->lock);
+  release(&kt->ktLock);     //task2.2
   acquire(lk);
 }
 
