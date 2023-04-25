@@ -110,7 +110,12 @@ void            procdump(void);
 // kthread.c
 void                    kthreadinit(struct proc *);
 struct kthread*         mykthread();
-static struct kthread*  allockthread(struct proc *p);
+struct kthread*         allockthread(struct proc *p);
+int                     allocktid(struct proc *p); //task2.2
+struct trapframe *      get_kthread_trapframe(struct proc *p, struct kthread *kt); //task2.2
+void             freekthread(struct kthread *kt); //task2.2
+
+
 //void                forkret(void); //task2.1
 
 // TODO: delte this after you are done with task 2.2

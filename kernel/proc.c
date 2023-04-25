@@ -128,8 +128,7 @@ allocproc(void)
   return 0;
 
 found:
-  p->ktidCounter = 1; //task2.2
-  allockthread(p);    //task2.2
+
 
   p->pid = allocpid();
   p->state = USED;
@@ -140,6 +139,8 @@ found:
     release(&p->lock);
     return 0;
   }
+  p->ktidCounter = 1; //task2.2
+  allockthread(p);    //task2.2
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);

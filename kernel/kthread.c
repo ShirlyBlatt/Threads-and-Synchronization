@@ -57,7 +57,7 @@ struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)
 //   p->context.sp = p->kthread->kstack + PGSIZE;
 // }
 
-static struct kthread* allockthread(struct proc *p){
+struct kthread* allockthread(struct proc *p){
   struct kthread *kt;
   int found = 0;
   for (kt = p->kthread; kt < &p->kthread[NKT] && !found; kt++){
@@ -76,7 +76,7 @@ static struct kthread* allockthread(struct proc *p){
   else{
     kt->ktId = allocktid(p);
     kt->ktState = KTUSED;
-    if(kt->trapframe = get_kthread_trapframe(p,kt) == 0){
+    if((kt->trapframe = get_kthread_trapframe(p,kt)) == 0){
       freekthread(kt);
       release(&kt->ktLock);
     }
@@ -87,8 +87,7 @@ static struct kthread* allockthread(struct proc *p){
   }
 }
 
-static void
-freekthread(struct kthread *kt){
+void freekthread(struct kthread *kt){
   if(kt->trapframe)               //TODO
     kfree((void*)kt->trapframe);
   kt->trapframe = 0;
