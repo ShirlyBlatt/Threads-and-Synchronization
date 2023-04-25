@@ -653,9 +653,17 @@ wakeup(void *chan)
   for(p = proc; p < &proc[NPROC]; p++) {
     if(p != myproc()){
       acquire(&p->lock);
-      if(p->state == SLEEPING && p->chan == chan) {
-        p->state = RUNNABLE;
+      struct kthread *kt;
+      for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){
+          acquire(&kt->ktLock);
+          if(kt->ktState == KTSLEEPING && kt->ktChan == chan){
+            kt->ktState = KTRUNNABLE;
+          }
+          release(&kt->ktLock);
       }
+      // if(p->state == SLEEPING && p->chan == chan) {
+      //   p->state = RUNNABLE;
+      // }
       release(&p->lock);
     }
   }
@@ -699,6 +707,13 @@ void
 setkilled(struct proc *p)
 {
   acquire(&p->lock);
+  //task2.2
+  struct kthread *kt;
+  for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
+      acquire(&kt->ktLock);
+      kt->ktKilled = 1;
+      release(&kt->ktLock);
+  }
   p->killed = 1;
   release(&p->lock);
 }
