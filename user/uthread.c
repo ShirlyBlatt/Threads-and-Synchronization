@@ -46,77 +46,83 @@ void freeThread(struct uthread* t){
     t = &pThreads[i];
     t->tid = nextId; //maybe we dont need TODO
     nextId++;
+    t->index = i;
     t->startFunc = start_func;
     t->priority = priority;
+    numOfCUrrThreads++;
 
     memset(&t->context, 0, sizeof(t->context));
     t->context.ra = (uint64)start_func;
-    t->context.sp = (uint64)&(t->ustack[STACK_SIZE]);
-    
+    t->context.sp = (uint64)t->ustack + STACK_SIZE;
+
     t->state = RUNNABLE;
-    numOfCUrrThreads++;
     return 0;
  }
 
  void uthread_yield(){
-    int i;
-    struct uthread *old = uthread_self();
-    struct uthread *t = old;
-    int found = 0;
-    for(i = 0; i <MAX_UTHREADS && (found == 0) ; i++){
-        if(t->tid == i){
-           found = 1;
-           break;
-        }
-    }
-    int j=i+1;
+    struct uthread *old = currThread;
+    int i = old->index;
+    struct uthread *temp;
+    struct uthread *t = 0;
+    enum sched_priority priority = -1; 
+    int j = 0;
+    if(i < MAX_UTHREADS - 1)
+       j = i + 1;
+    temp = &pThreads[j];
     while (j != i){
-        if(j == MAX_UTHREADS){
-            j = 0;
-        }
-        if(t->priority < (&pThreads[j])->priority){
-            if((&pThreads[j])->state == RUNNABLE){
-                t = &pThreads[j];
+        if(temp->state == RUNNABLE){
+            if(priority < temp->priority){
+                priority = temp->priority;
+                t = temp;
             }
         }
-        j++;
+        if(j == MAX_UTHREADS - 1){
+            j = 0;
+        }
+        else{
+            j++;
+        } 
+        temp = &pThreads[j];
     }
+    if(t == 0)
+        exit(0);
+    old->state = RUNNABLE;
     t->state = RUNNING;
     currThread = t;
-    old->state = RUNNABLE;
     uswtch(&old->context,&t->context);
  }
 
 
  void uthread_exit(){
-    int i;
-    struct uthread *old = uthread_self();
-    struct uthread *t = old;
-    int found = 0;
-    for(i = 0; i <MAX_UTHREADS && (found == 0) ; i++){
-        if(t->tid == i){
-           found = 1;
-           break;
-        }
-    }
-    int j=i+1;
+    struct uthread *old = currThread;
+    int i = old->index;
+    struct uthread *temp;
+    struct uthread *t = 0;
+    enum sched_priority priority = -1; 
+    int j = 0;
+    if(i < MAX_UTHREADS - 1)
+       j = i + 1;
+    temp = &pThreads[j];
     while (j != i){
-        if(j == MAX_UTHREADS){
-            j = 0;
-        }
-        if(t->priority < (&pThreads[j])->priority){
-            if((&pThreads[j])->state == RUNNABLE){
-                t = &pThreads[j];
+        if(temp->state == RUNNABLE){
+            if(priority < temp->priority){
+                priority = temp->priority;
+                t = temp;
             }
         }
-        j++;
+        if(j == MAX_UTHREADS - 1){
+            j = 0;
+        }
+        else{
+            j++;
+        } 
+        temp = &pThreads[j];
     }
+    if(t == 0)
+        exit(0);
     t->state = RUNNING;
     currThread = t;
-    freeThread(old);
-    if(numOfCUrrThreads == 1){
-        exit(0);
-    }
+    old->state = FREE;
     uswtch(&old->context,&t->context);
  }
 

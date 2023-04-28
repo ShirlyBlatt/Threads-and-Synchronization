@@ -35,6 +35,7 @@ struct uthread {
     //task1.1
     int tid;                            //thread's unique id
     void* startFunc;                    //thread's start function
+    int index;                          //thread's index in the proc table
 };
 
 void freeThread(struct uthread* t);
