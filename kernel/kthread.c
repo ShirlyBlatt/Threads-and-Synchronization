@@ -20,7 +20,7 @@ void kthreadinit(struct proc *p){
   for (struct kthread *kt = p->kthread; kt < &p->kthread[NKT]; kt++)
   {
     initlock(&kt->ktLock, "thread");
-    kt->ktState = KTUNUSED;
+    kt->ktState = UNUSED;
     kt->myprocess = p;
     // WARNING: Don't change this line!
     // get the pointer to the kernel stack of the kthread
@@ -62,7 +62,7 @@ struct kthread* allockthread(struct proc *p){
   int found = 0;
   for (kt = p->kthread; kt < &p->kthread[NKT] && !found; kt++){
     acquire(&kt->ktLock);
-    if(kt->ktState == KTUNUSED){
+    if(kt->ktState == UNUSED){
       found = 1;
       break;
     }
@@ -75,10 +75,12 @@ struct kthread* allockthread(struct proc *p){
   }
   else{
     kt->ktId = allocktid(p);
-    kt->ktState = KTUSED;
+    kt->ktState = USED;
+    kt->myprocess = p;
     if((kt->trapframe = get_kthread_trapframe(p,kt)) == 0){
       freekthread(kt);
       release(&kt->ktLock);
+      return 0;
     }
     memset(&kt->ktContext, 0, sizeof(kt->ktContext));
     kt->ktContext.ra = (uint64)forkret;
@@ -88,8 +90,6 @@ struct kthread* allockthread(struct proc *p){
 }
 
 void freekthread(struct kthread *kt){
-  if(kt->trapframe)               //TODO
-    kfree((void*)kt->trapframe);
   kt->trapframe = 0;
   kt->ktChan = 0;
   kt->ktKilled = 0;
@@ -97,8 +97,5 @@ void freekthread(struct kthread *kt){
   kt->ktId = 0;
   kt->myprocess = 0;
 
-  //kt->kstack = 0;       //TODO
-  //kt->ktContext = 0;
-  //maybe release ktlock
-  kt->ktState = KTUNUSED;
+  kt->ktState = UNUSED;
 }

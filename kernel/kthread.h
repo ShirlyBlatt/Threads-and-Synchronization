@@ -83,7 +83,8 @@ struct cpu {
 extern struct cpu cpus[NCPU];
 
 //task 2.1
-enum kthreadstate { KTUNUSED, KTUSED, KTSLEEPING, KTRUNNABLE, KTRUNNING, KTZOMBIE };
+//enum kthreadstate { KTUNUSED, KTUSED, KTSLEEPING, KTRUNNABLE, KTRUNNING, KTZOMBIE };
+enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 struct kthread
 {
@@ -94,7 +95,7 @@ struct kthread
 
   //task 2.1
   struct spinlock ktLock;         //thread's lock
-  enum kthreadstate ktState;      //thread's state
+  enum procstate ktState;         //thread's state
   void *ktChan;                   // If non-zero, sleeping on chan
   int ktKilled;                   // If non-zero, have been killed
   int ktXstate;                   // Exit status to be returned to parent's wait

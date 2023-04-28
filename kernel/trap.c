@@ -163,7 +163,7 @@ kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2 && mykthread() != 0 && mykthread()->ktState == KTRUNNING)
+  if(which_dev == 2 && mykthread() != 0 && mykthread()->ktState == RUNNING)
     yield();
 
   // the yield() may have caused some traps to occur,
