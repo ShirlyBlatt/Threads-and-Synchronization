@@ -53,14 +53,16 @@ usertrap(void)
   if(r_scause() == 8){
     // system call
 
+    if(killed(p))
+       exit(-1);
     //task2.2
+    
     acquire(&kt->ktLock);
     int kt_killed = kt->ktKilled;
     release(&kt->ktLock);
     if(kt_killed)
       exit(-1);
-    // if(killed(p))
-    //   exit(-1);
+   
 
     // sepc points to the ecall instruction,
     // but we want to return to the next instruction.
@@ -78,14 +80,15 @@ usertrap(void)
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
   }
+  if(killed(p))
+    exit(-1);
   //task2.2
   acquire(&kt->ktLock);
   int kt_killed = kt->ktKilled;
   release(&kt->ktLock);
   if(kt_killed)
     exit(-1);
-  // if(killed(p))
-  //   exit(-1);
+
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)

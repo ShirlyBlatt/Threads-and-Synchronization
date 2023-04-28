@@ -90,12 +90,12 @@ myproc(void)
   struct cpu *c = mycpu();
   //task2.2
  // struct kthread *kt = mykthread();
- struct kthread *kt = c->kthread;
- if(kt == 0){
-  return 0;
- }
+  struct kthread *kt = c->kthread;
+  if(kt == 0){
+    return 0;
+  }
   struct proc *p = kt->myprocess;
-   pop_off();
+  pop_off();
   return p;
 }
 
@@ -180,13 +180,8 @@ freeproc(struct proc *p)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
   //task2.2
-  struct kthread *kt;
-  for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
-    acquire(&kt->ktLock);  //TODO
-    if(kt->ktState != UNUSED)
-      freekthread(kt);
-    release(&kt->ktLock);
-  }
+  
+
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -194,6 +189,15 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+
+  struct kthread *kt;
+  for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){ //task2.2
+    //acquire(&kt->ktLock);  //TODO
+    //if(kt->ktState != UNUSED)
+    freekthread(kt);
+    //release(&kt->ktLock);
+  }
+
   p->ktidCounter = 0;
   p->state = UNUSED;
  
@@ -277,7 +281,6 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
-  //p->state = RUNNABLE;
   p->kthread[0].ktState = RUNNABLE; //task2.2
 
   release(&p->kthread[0].ktLock);     //task2.2
@@ -447,7 +450,6 @@ wait(uint64 addr)
   int havekids, pid;
   struct proc *p = myproc();
 
-  //int ppState;    //task2.2
 
   acquire(&wait_lock);
 
@@ -458,22 +460,17 @@ wait(uint64 addr)
       if(pp->parent == p){
         // make sure the child isn't still in exit() or swtch().
         acquire(&pp->lock);                                  
-       // struct kthread *kt = &pp->kthread[0];                //task2.2
-       // acquire(&kt->ktLock);                                //task2.2
         havekids = 1;
         if(pp->state == ZOMBIE){
           // Found one.
           pid = pp->pid;
-          //ppState = pp->xstate;
           if(addr != 0 && copyout(p->pagetable, addr, (char *)&pp->xstate,
                                   sizeof(pp->xstate)) < 0) {
-            //release(&kt->ktLock);           //task2.2
             release(&pp->lock);
             release(&wait_lock);
             return -1;
           }
           freeproc(pp);
-          //release(&kt->ktLock);
           release(&pp->lock);
           release(&wait_lock);
           return pid;
@@ -519,8 +516,6 @@ scheduler(void)
     intr_on();
 
     for(p = proc; p < &proc[NPROC]; p++) {
-      //acquire(&p->lock);
-      //if(p->state == USED) { //TODO maybe we dont need 
         //task2.2
         struct kthread *kt;
         for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){
@@ -533,8 +528,6 @@ scheduler(void)
           }
           release(&kt->ktLock);
         }
-      //}
-      //release(&p->lock);
     }
   }
 }
@@ -550,7 +543,6 @@ void
 sched(void)
 {
   int intena;
-  //struct proc *p = myproc();
   struct kthread *kt = mykthread();
 
   if(!holding(&kt->ktLock))          //task2.2
@@ -571,16 +563,12 @@ sched(void)
 void
 yield(void)
 {
-  //struct proc *p = myproc();
-  // acquire(&p->lock);
-  // p->state = RUNNABLE;
   //task2.2
   struct kthread *kt = mykthread();
   acquire(&kt->ktLock);
   kt->ktState = RUNNABLE;
   sched();
   release(&kt->ktLock);
-  //release(&p->lock);
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -592,7 +580,6 @@ forkret(void)
 
   // Still holding p->lock from scheduler.
   release(&mykthread()->ktLock);      //task2.2
-  //release(&myproc()->lock);         //TODO maybe dont need
 
   if (first) {
     // File system initialization must be run in the context of a
@@ -610,7 +597,7 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
-  //struct proc *p = myproc();
+
   struct kthread *kt = mykthread(); //task2.2
   
   // Must acquire p->lock in order to
@@ -620,13 +607,12 @@ sleep(void *chan, struct spinlock *lk)
   // (wakeup locks p->lock),
   // so it's okay to release lk.
 
-  //acquire(&p->lock);  //DOC: sleeplock1
+   //DOC: sleeplock1
   acquire(&kt->ktLock); //task2.2
   release(lk);
 
   // Go to sleep.
-  // p->chan = chan;
-  // p->state = SLEEPING;
+
 
   kt->ktChan = chan;         //task2.2
   kt->ktState = SLEEPING; //task2.2
@@ -634,11 +620,9 @@ sleep(void *chan, struct spinlock *lk)
   sched();
 
   // Tidy up.
-  //p->chan = 0;
   kt->ktChan = 0;           //task2.2
 
   // Reacquire original lock.
-  //release(&p->lock);
   release(&kt->ktLock);     //task2.2
   acquire(lk);
 }
@@ -688,10 +672,6 @@ kill(int pid)
           }
           release(&kt->ktLock);
       }
-      // if(p->state == SLEEPING){
-      //   // Wake process from sleep().
-      //   p->state = RUNNABLE;
-      // }
       release(&p->lock);
       return 0;
     }
