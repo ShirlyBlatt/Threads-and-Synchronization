@@ -112,7 +112,7 @@ exec(char *path, char **argv)
     goto bad;
 
 
-  terminate_all_other_kthreads(kt,0); //task2.3
+  terminate_all_other_kthreads(); //task2.3
 
   // arguments to user main(argc, argv)
   // argc is returned via the system call return
