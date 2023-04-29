@@ -59,9 +59,10 @@ usertrap(void)
     
     acquire(&kt->ktLock);
     int kt_killed = kt->ktKilled;
+    int ktid = kt->ktId;     //task2.3
     release(&kt->ktLock);
-    if(kt_killed)
-      exit(-1);
+    if(kt_killed)           //task2.3
+      kthread_exit(ktid);  //task2.3
    
 
     // sepc points to the ecall instruction,
@@ -85,9 +86,10 @@ usertrap(void)
   //task2.2
   acquire(&kt->ktLock);
   int kt_killed = kt->ktKilled;
+  int ktid = kt->ktId;    //task2.3
   release(&kt->ktLock);
-  if(kt_killed)
-    exit(-1);
+  if(kt_killed)          //task2.3
+    kthread_exit(ktid);  //task2.3
 
 
   // give up the CPU if this is a timer interrupt.

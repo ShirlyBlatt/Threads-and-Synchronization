@@ -89,3 +89,49 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+ 
+//task2.3
+uint64
+sys_kthread_create(void)
+{
+  void (*start_func)(void);
+  argaddr(0, (void*)&start_func);
+  uint64 stack;
+  argaddr(1, &stack);
+  int stack_size;
+  argint(2, &stack_size);
+  return kthread_create((uint64)start_func,stack, stack_size);
+}
+
+//task2.3
+uint64
+sys_kthread_id(void){
+  return kthread_id();
+}
+
+//task2.3
+uint64
+sys_kthread_kill(void){
+  int ktid;
+  argint(0, &ktid);
+  return kthread_kill(ktid);
+}
+
+//task2.3
+uint64
+sys_kthread_exit(void){
+  int status;
+  argint(0, &status);
+  kthread_exit(status);
+  return 0; //TODO what we need to return ? 
+}
+
+//task2.3
+uint64
+sys_kthread_join(void){
+  int ktid;
+  argint(0, &ktid);
+  uint64 status;
+  argaddr(1, &status);
+  return kthread_join(ktid, status);
+}

@@ -53,7 +53,7 @@ void freeThread(struct uthread* t){
 
     memset(&t->context, 0, sizeof(t->context));
     t->context.ra = (uint64)start_func;
-    t->context.sp = (uint64)t->ustack + STACK_SIZE;
+    t->context.sp = (uint64)t->ustack + STACK_SIZE - 1;
 
     t->state = RUNNABLE;
     return 0;

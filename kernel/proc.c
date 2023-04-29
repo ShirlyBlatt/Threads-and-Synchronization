@@ -762,3 +762,132 @@ procdump(void)
     printf("\n");
   }
 }
+
+//task2.3
+int kthread_create(uint64 start_func,uint64 stack, int stack_size){
+  int tid;
+  struct proc *p = myproc();
+  acquire(&p->lock);
+  struct kthread *kt = allockthread(p);
+  if(kt == 0){
+    release(&p->lock);
+    return -1;
+  }
+  else{
+    kt->ktState = RUNNABLE;
+    kt->trapframe->epc = (uint64)start_func;
+    kt->trapframe->sp = (uint64)(stack + stack_size - 1);
+    tid = kt->ktId;
+    release(&kt->ktLock);
+    release(&p->lock);
+    return tid;
+  }
+}
+
+//task2.3
+int kthread_id(void){
+  struct kthread *kt = mykthread();
+  int ktid;
+  acquire(&kt->ktLock);
+  ktid = kt->ktId;
+  release(&kt->ktLock);
+  return ktid;
+}
+
+//task2.3
+int kthread_kill(int ktid){
+  struct proc *p = myproc();
+  struct kthread *kt;
+  int found = 0;
+  acquire(&p->lock);
+  for (kt = p->kthread; kt < &p->kthread[NKT] && (found == 0); kt++){
+    acquire(&kt->ktLock);
+    if(kt->ktId == ktid){
+      found = 1;
+      break;
+      }
+    else{
+      release(&kt->ktLock);
+    }
+  }
+if(found == 0){
+  release(&p->lock);
+  return -1;
+}
+else{
+  kt->ktKilled = 1;
+  if(kt->ktState == SLEEPING){
+    kt->ktState = RUNNABLE;
+  }
+  release(&kt->ktLock);
+  release(&p->lock);
+  return 0;
+  }
+}
+
+//task2.3
+void kthread_exit(int status){
+  struct kthread *kt = mykthread();
+  acquire(&wait_lock);
+  wakeup(myproc()->parent);   //TODO check who we need to wakeup
+
+  acquire(&kt->ktLock);
+  kt->ktXstate = status;     
+  kt->ktState = ZOMBIE;
+  //release(&kt->ktLock);
+  release(&wait_lock);
+  sched();
+  panic("zombie exit");
+}
+
+//task2.3
+int kthread_join(int ktid, uint64 status){
+  struct proc *p = myproc();
+  int found = 0;
+  struct kthread *kt;
+  acquire(&wait_lock);
+  for(;;){
+    acquire(&p->lock);
+    for (kt = p->kthread; kt < &p->kthread[NKT] ; kt++){
+      acquire(&kt->ktLock);
+      if(kt->ktId == ktid){
+        found = 1;
+        if(kt->ktState == ZOMBIE){
+            if(status != 0 && copyout(p->pagetable, status, (char *)&kt->ktXstate,
+                                    sizeof(kt->ktXstate)) < 0) {
+              //we couldnt copy
+              release(&kt->ktLock);
+              release(&p->lock);
+              release(&wait_lock);
+              return -1;
+            }
+            //we copyied well
+            freekthread(kt); //TODO check if we need to free
+            release(&kt->ktLock);
+            release(&p->lock);
+            release(&wait_lock);
+            return 0;
+        }
+        //the ktid thread didnt terminate
+      }
+      release(&kt->ktLock);
+    }
+    
+    release(&p->lock);
+    if(found == 0 || kt == 0 || kthread_get_killed(kt)){  //didnt found the thread with ktid
+      release(&wait_lock);
+      return -1;
+    } 
+    sleep(kt,&wait_lock);
+  }
+}
+
+
+//task2.3
+int kthread_get_killed( struct kthread *kt){
+  int ktkilled;
+  acquire(&kt->ktLock);
+  ktkilled = kt->ktKilled;
+  release(&kt->ktLock);
+  return ktkilled;
+}
