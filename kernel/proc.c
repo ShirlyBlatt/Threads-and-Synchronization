@@ -919,7 +919,7 @@ void terminate_all_other_kthreads(void){
   int temp_ktid = 0;
   while(1){
     acquire(&p->lock);
-   for(temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
+    for(temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
     //acquire(&temp->ktLock);
     if(mykthread() != temp){
       acquire(&temp->ktLock);
