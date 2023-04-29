@@ -111,6 +111,9 @@ exec(char *path, char **argv)
   if(copyout(pagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
     goto bad;
 
+
+  terminate_all_other_kthreads(kt,0); //task2.3
+
   // arguments to user main(argc, argv)
   // argc is returned via the system call return
   // value, which goes in a0.

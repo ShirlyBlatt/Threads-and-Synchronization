@@ -391,6 +391,8 @@ void
 exit(int status)
 {
   struct proc *p = myproc();
+  struct kthread *me = mykthread();          //task2.3
+  terminate_all_other_kthreads(me, status);  //task2.3
 
   if(p == initproc)
     panic("init exiting");
@@ -828,16 +830,34 @@ else{
 //task2.3
 void kthread_exit(int status){
   struct kthread *kt = mykthread();
-  acquire(&wait_lock);
-  wakeup(myproc()->parent);   //TODO check who we need to wakeup
+  struct kthread *temp;
+  struct proc *p = myproc();
+  int numOfKThreads = 0;
+  acquire(&p->lock);
+  for (temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
+    acquire(&temp->ktLock);
+    if((temp->ktState != UNUSED) && (temp->ktState != ZOMBIE)){
+      numOfKThreads++;
+    }
+    release(&temp->ktLock);
+  }
+  release(&p->lock);
+  if(numOfKThreads == 1){
+    exit(status);
+  }
+  else{
+    acquire(&wait_lock);
+    wakeup(kt);           //TODO check who we need to wakeup
 
-  acquire(&kt->ktLock);
-  kt->ktXstate = status;     
-  kt->ktState = ZOMBIE;
-  //release(&kt->ktLock);
-  release(&wait_lock);
-  sched();
-  panic("zombie exit");
+    acquire(&kt->ktLock);
+    kt->ktXstate = status;     
+    kt->ktState = ZOMBIE;
+    //release(&kt->ktLock);
+    release(&wait_lock);
+    sched();
+    panic("zombie exit");
+  }
+
 }
 
 //task2.3
@@ -890,4 +910,26 @@ int kthread_get_killed( struct kthread *kt){
   ktkilled = kt->ktKilled;
   release(&kt->ktLock);
   return ktkilled;
+}
+
+void terminate_all_other_kthreads(struct kthread *me, int status){
+  struct proc *p = me->myprocess;
+  struct kthread *temp;
+  int temp_ktid;
+  acquire(&p->lock);
+   for(temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
+    acquire(&temp->ktLock);
+    if(me->ktId != temp->ktId){
+      temp_ktid = temp->ktId;
+      release(&temp->ktLock);
+      release(&p->lock);
+      kthread_kill(temp_ktid);
+      kthread_join(temp_ktid,status);
+      acquire(&p->lock);
+    }
+    else{
+      release(&temp->ktLock);
+    }
+   }
+  release(&p->lock);
 }

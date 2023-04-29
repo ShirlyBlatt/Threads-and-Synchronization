@@ -113,6 +113,7 @@ int             kthread_kill(int);//task2.3
 void            kthread_exit(int);//task2.3
 int             kthread_join(int , uint64);//task2.3
 int             kthread_get_killed(struct kthread*);//task2.3
+void            terminate_all_other_kthreads(struct kthread*, int); //task2.3
 
 // kthread.c
 void                    kthreadinit(struct proc *);
