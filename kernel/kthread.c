@@ -28,7 +28,7 @@ void kthreadinit(struct proc *p){
   }
 }
 
-struct kthread *mykthread(){ //do we need push/pop ? TODO
+struct kthread *mykthread(){ 
   push_off();
   struct cpu *c = mycpu();
   struct kthread *kt = c->kthread;
@@ -50,12 +50,6 @@ struct trapframe *get_kthread_trapframe(struct proc *p, struct kthread *kt)
   return p->base_trapframes + ((int)(kt - p->kthread));
 }
 
-// TODO: delte this after you are done with task 2.2
-// void allocproc_help_function(struct proc *p) {
-//   p->kthread->trapframe = get_kthread_trapframe(p, p->kthread);
-
-//   p->context.sp = p->kthread->kstack + PGSIZE;
-// }
 
 struct kthread* allockthread(struct proc *p){
   struct kthread *kt;

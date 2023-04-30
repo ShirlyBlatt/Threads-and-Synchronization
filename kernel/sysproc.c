@@ -62,9 +62,8 @@ sys_sleep(void)
       release(&tickslock);
       return -1;
     }
-    if(kthread_get_killed(mykthread())){  //task2.3 //TODO
+    if(kthread_get_killed(mykthread())){  //task2.3 
       release(&tickslock);
-      //kthread_kill(mykthread()->ktId);
       return -1;
     }
     sleep(&ticks, &tickslock);
@@ -128,7 +127,7 @@ sys_kthread_exit(void){
   int status;
   argint(0, &status);
   kthread_exit(status);
-  return 0; //TODO what we need to return ? 
+  return 0;
 }
 
 //task2.3

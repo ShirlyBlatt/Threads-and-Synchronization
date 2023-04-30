@@ -161,9 +161,6 @@ found:
   // p->context.ra = (uint64)forkret;
   // p->context.sp = p->kstack + PGSIZE;
 
-
-  // TODO: delte this after you are done with task 2.2
-  //allocproc_help_function(p);
   return p;
 }
 
@@ -186,16 +183,12 @@ freeproc(struct proc *p)
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
-  p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
 
   struct kthread *kt;
   for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){ //task2.2
-    //acquire(&kt->ktLock);  //TODO
-    //if(kt->ktState != UNUSED)
     freekthread(kt);
-    //release(&kt->ktLock);
   }
 
   p->ktidCounter = 0;
@@ -333,7 +326,7 @@ fork(void)
   //task2.2
   if(&(np->kthread[0]) == 0){
     freeproc(np);
-    release(&np->lock); //TODO maybe not
+    release(&np->lock); 
     return -1;
   }
 
@@ -429,7 +422,6 @@ exit(int status)
   struct kthread *kt;
   for (kt = p->kthread; kt < &p->kthread[NKT]; kt++) {
     acquire(&kt->ktLock);
-    //kt->ktXstate = status;     //TODO maybe we dont need
     kt->ktState = ZOMBIE;
     release(&kt->ktLock);
   }
@@ -483,16 +475,16 @@ wait(uint64 addr)
     }
 
     //task2.2
-    struct kthread* me = mykthread();
-    acquire(&me->ktLock);
+    // struct kthread* me = mykthread();
+    // acquire(&me->ktLock);
     // No point waiting if we don't have any children.
-    if(!havekids || me->ktKilled == 1){
-      release(&me->ktLock);
+    if(!havekids || kthread_get_killed(mykthread())){
+      //release(&me->ktLock);
       release(&wait_lock);
       return -1;
     }
     //task2.2
-    release(&me->ktLock);
+    //release(&me->ktLock);
     
     // Wait for a child to exit.
     sleep(p, &wait_lock);  //DOC: wait-sleep
@@ -638,9 +630,9 @@ wakeup(void *chan)
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
+      acquire(&p->lock); //TODO
       struct kthread *kt;
-      for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){
+      for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){ //task2.2
           if(kt != mykthread()){
             acquire(&kt->ktLock);
             if(kt->ktState == SLEEPING && kt->ktChan == chan){
@@ -664,7 +656,7 @@ kill(int pid)
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     if(p->pid == pid){
-      p->killed = 1;
+      p->killed = 1;  //TODO where to release?
       //task2.2
       struct kthread *kt;
       for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
@@ -687,13 +679,6 @@ void
 setkilled(struct proc *p)
 {
   acquire(&p->lock);
-  //task2.2
-  //struct kthread *kt;
-  // for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){
-  //     acquire(&kt->ktLock);
-  //     kt->ktKilled = 1;
-  //     release(&kt->ktLock);
-  // }
   p->killed = 1;
   release(&p->lock);
 }
@@ -779,7 +764,7 @@ int kthread_create(uint64 start_func,uint64 stack, int stack_size){
   else{
     kt->ktState = RUNNABLE;
     kt->trapframe->epc = (uint64)start_func;
-    kt->trapframe->sp = (uint64)(stack + stack_size - 1);
+    kt->trapframe->sp = (uint64)(stack + stack_size);
     tid = kt->ktId;
     release(&kt->ktLock);
     release(&p->lock);
@@ -802,7 +787,7 @@ int kthread_kill(int ktid){
   struct proc *p = myproc();
   struct kthread *kt;
   int found = 0;
-  acquire(&p->lock);
+  acquire(&p->lock);  //TODO
   for (kt = p->kthread; kt < &p->kthread[NKT] && (found == 0); kt++){
     acquire(&kt->ktLock);
     if(kt->ktId == ktid){
@@ -834,7 +819,7 @@ void kthread_exit(int status){
   struct kthread *temp;
   struct proc *p = myproc();
   int numOfKThreads = 0;
-  acquire(&p->lock);
+  acquire(&p->lock); //TODO
   for (temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
     acquire(&temp->ktLock);
     if((temp->ktState != UNUSED) && (temp->ktState != ZOMBIE)){
@@ -862,46 +847,60 @@ void kthread_exit(int status){
 }
 
 //task2.3
-int kthread_join(int ktid, uint64 status){
+struct kthread* get_kthread_by_ktid(int ktid){
   struct proc *p = myproc();
-  int found = 0;
   struct kthread *kt;
-  acquire(&wait_lock);
-  for(;;){
-    acquire(&p->lock);
-    for (kt = p->kthread; kt < &p->kthread[NKT] ; kt++){
-      acquire(&kt->ktLock);
-      if(kt->ktId == ktid){
-        found = 1;
-        if(kt->ktState == ZOMBIE){
-            if(status != 0 && copyout(p->pagetable, status, (char *)&kt->ktXstate,
-                                    sizeof(kt->ktXstate)) < 0) {
-              //we couldnt copy
-              release(&kt->ktLock);
-              release(&p->lock);
-              release(&wait_lock);
-              return -1;
-            }
-            //we copyied well
-            freekthread(kt); //TODO check if we need to free
-            release(&kt->ktLock);
-            release(&p->lock);
-            release(&wait_lock);
-            return 0;
-        }
-        //the ktid thread didnt terminate
-      }
+  acquire(&p->lock); //TODO
+  for (kt = p->kthread; kt < &p->kthread[NKT] ; kt++){
+    acquire(&kt->ktLock);
+    if(kt->ktId == ktid){
+      release(&kt->ktLock);
+      release(&p->lock);
+      return kt;
+    }
+    else{
       release(&kt->ktLock);
     }
-    
-    release(&p->lock);
-    if(found == 0 || kt == 0 || kthread_get_killed(kt)){  //didnt found the thread with ktid
+  }
+  release(&p->lock);
+  return 0;
+}
+
+//task2.3
+int kthread_join(int ktid, uint64 status){
+  acquire(&wait_lock);
+
+  for(;;){
+
+    struct kthread *kt = get_kthread_by_ktid(ktid);
+    if(kt){
+      acquire(&kt->ktLock);
+      if(kt->ktState == ZOMBIE){
+          if(status != 0 && copyout(myproc()->pagetable, status, (char *)&kt->ktXstate,
+                                    sizeof(kt->ktXstate)) < 0) {
+            //we couldnt copy
+            release(&kt->ktLock);
+            release(&wait_lock);
+            return -1;
+            }
+            //we copyied well
+            freekthread(kt); 
+            release(&kt->ktLock);
+            release(&wait_lock);
+            return 0;
+      }
+      //the ktid thread didnt terminate
+      release(&kt->ktLock);
+      sleep(kt,&wait_lock);
+    }
+    if(kt == 0 || kthread_get_killed(mykthread())){  //didnt found the thread with ktid
       release(&wait_lock);
       return -1;
     } 
-    sleep(kt,&wait_lock);
+      
   }
 }
+
 
 
 //task2.3
@@ -918,9 +917,8 @@ void terminate_all_other_kthreads(void){
   struct kthread *temp;
   int temp_ktid = 0;
   while(1){
-    acquire(&p->lock);
+    acquire(&p->lock);  //TODO
     for(temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
-    //acquire(&temp->ktLock);
     if(mykthread() != temp){
       acquire(&temp->ktLock);
       temp_ktid = temp->ktId;

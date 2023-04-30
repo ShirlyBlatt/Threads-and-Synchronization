@@ -9,7 +9,7 @@ static struct uthread pThreads[MAX_UTHREADS];
 static struct uthread *currThread = 0;
 int numOfCUrrThreads = 1;
 int firstThread = 1;
-int nextId = 1; //maybe we dont need TODO
+int nextId = 1; 
 struct uthread emptyThread;
 
 void freeThread(struct uthread* t){
@@ -44,7 +44,7 @@ void freeThread(struct uthread* t){
         return -1;
     }
     t = &pThreads[i];
-    t->tid = nextId; //maybe we dont need TODO
+    t->tid = nextId; 
     nextId++;
     t->index = i;
     t->startFunc = start_func;
@@ -53,7 +53,7 @@ void freeThread(struct uthread* t){
 
     memset(&t->context, 0, sizeof(t->context));
     t->context.ra = (uint64)start_func;
-    t->context.sp = (uint64)t->ustack + STACK_SIZE - 1;
+    t->context.sp = (uint64)t->ustack + STACK_SIZE;
 
     t->state = RUNNABLE;
     return 0;
@@ -148,7 +148,7 @@ void freeThread(struct uthread* t){
         if(t != 0){
             t->state = RUNNING;
             currThread = t;
-            uswtch(&emptyThread.context,&t->context); //TODO
+            uswtch(&emptyThread.context,&t->context); 
         }
     }
     return -1;

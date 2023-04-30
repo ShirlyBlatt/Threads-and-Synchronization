@@ -108,10 +108,11 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             kthread_create(uint64, uint64, int ); //task2.3
-int             kthread_id(void);//task2.3
-int             kthread_kill(int);//task2.3
-void            kthread_exit(int);//task2.3
-int             kthread_join(int , uint64);//task2.3
+int             kthread_id(void);   //task2.3
+int             kthread_kill(int);  //task2.3
+void            kthread_exit(int);  //task2.3
+struct kthread* get_kthread_by_ktid(int ktid);  //task2.3
+int             kthread_join(int , uint64);     //task2.3
 int             kthread_get_killed(struct kthread*);//task2.3
 void            terminate_all_other_kthreads(void); //task2.3
 
@@ -123,11 +124,6 @@ int                     allocktid(struct proc *p); //task2.2
 struct trapframe *      get_kthread_trapframe(struct proc *p, struct kthread *kt); //task2.2
 void                    freekthread(struct kthread *kt); //task2.2
 
-
-//void                forkret(void); //task2.1
-
-// TODO: delte this after you are done with task 2.2
-//void allocproc_help_function(struct proc *p);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
