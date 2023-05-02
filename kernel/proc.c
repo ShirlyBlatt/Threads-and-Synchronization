@@ -437,8 +437,9 @@ exit(int status)
   release(&wait_lock);
   }
   else{
+      kthread_kill(mykthread()->ktId);
      acquire(&mykthread()->ktLock);  //task 2.2
-     kthread_kill(mykthread()->ktId);
+     
   }
 
   // Jump into the scheduler, never to return.
