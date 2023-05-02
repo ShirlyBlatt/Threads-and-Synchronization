@@ -60,4 +60,6 @@ struct proc {
   //task2.2
   int ktidCounter;
   struct spinlock ktid_lock;
+  //task2.3
+  struct spinlock join_lock;
 };

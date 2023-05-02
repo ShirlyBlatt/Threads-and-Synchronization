@@ -78,7 +78,7 @@ struct kthread* allockthread(struct proc *p){
     }
     memset(&kt->ktContext, 0, sizeof(kt->ktContext));
     kt->ktContext.ra = (uint64)forkret;
-    kt->ktContext.sp = kt->kstack + PGSIZE;   //what we need to add insted of PGSIZE ? TODO
+    kt->ktContext.sp = kt->kstack + PGSIZE;   
     return kt;
   }
 }
