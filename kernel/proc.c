@@ -24,7 +24,7 @@ extern char trampoline[]; // trampoline.S
 
 
 //task2.3
-int firstThreadToExit = 1;
+//int firstThreadToExit = 1;
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -386,67 +386,76 @@ reparent(struct proc *p)
 void
 exit(int status)
 {
+  static int firstThreadToExit = 1;
   struct proc *p = myproc();
- 
+  acquire(&p->lock);
+  
   if(firstThreadToExit){
     firstThreadToExit = 0;
+    release(&p->lock);
     terminate_all_other_kthreads();  //task2.3
   
  
-  if(p == initproc)
-    panic("init exiting");
+    if(p == initproc)
+      panic("init exiting");
 
-  // Close all open files.
-  for(int fd = 0; fd < NOFILE; fd++){
-    if(p->ofile[fd]){
-      struct file *f = p->ofile[fd];
-      fileclose(f);
-      p->ofile[fd] = 0;
+    // Close all open files.
+    for(int fd = 0; fd < NOFILE; fd++){
+      if(p->ofile[fd]){
+        struct file *f = p->ofile[fd];
+        fileclose(f);
+        p->ofile[fd] = 0;
+      }
     }
-  }
 
-  begin_op();
-  iput(p->cwd);
-  end_op();
-  p->cwd = 0;
-
-  acquire(&wait_lock);
-
-  // Give any children to init.
-  reparent(p);
-
-  // Parent might be sleeping in wait().
-  wakeup(p->parent);
-  
-  acquire(&p->lock);
-
-  p->xstate = status;
-  p->state = ZOMBIE;
-
-  //task 2.2
-  struct kthread *kt;
-  for (kt = p->kthread; kt < &p->kthread[NKT]; kt++) {
-    acquire(&kt->ktLock);
-    kt->ktState = ZOMBIE;
-    release(&kt->ktLock);
-  }
-  acquire(&mykthread()->ktLock);  //task 2.2
-  
-  release(&p->lock);
-
-  release(&wait_lock);
+    begin_op();
+    iput(p->cwd);
+    end_op();
+    p->cwd = 0;
   }
   else{
-      kthread_kill(mykthread()->ktId);
-     acquire(&mykthread()->ktLock);  //task 2.2
-     
+    release(&p->lock);
   }
+    acquire(&wait_lock);
 
+    // Give any children to init.
+    reparent(p);
+
+    // Parent might be sleeping in wait().
+    wakeup(p->parent);
+    
+    acquire(&p->lock);
+
+    p->xstate = status;
+    p->state = ZOMBIE;
+
+    release(&p->lock);
+    //task 2.2
+    // struct kthread *kt;
+    // for (kt = p->kthread; kt < &p->kthread[NKT]; kt++) {
+    //   acquire(&kt->ktLock);
+    //   kt->ktState = ZOMBIE;
+    //   release(&kt->ktLock);
+    // 
+    struct kthread *kt = mykthread();
+    acquire(&kt->ktLock);
+    kt->ktState = ZOMBIE;
+
+    //acquire(&mykthread()->ktLock);  //task 2.2
+    
+
+    release(&wait_lock);
+  // }
+  // else{
+  //   release(&p->lock);
+  //   kthread_exit(status);
+  // }
   // Jump into the scheduler, never to return.
   sched();
   panic("zombie exit");
-
 }
+
+
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
@@ -643,9 +652,9 @@ wakeup(void *chan)
 
   for(p = proc; p < &proc[NPROC]; p++) {
       //acquire(&p->lock); //TODO
-      struct kthread *kt;
+      struct kthread *kt = 0;
       for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){ //task2.2
-          if(kt != mykthread()){
+          if(kt != mykthread() && kt != 0){
             acquire(&kt->ktLock);
             if(kt->ktState == SLEEPING && kt->ktChan == chan){
               kt->ktState = RUNNABLE;
@@ -834,35 +843,43 @@ void kthread_exit(int status){
   struct kthread *kt = mykthread();
   struct kthread *temp;
   struct proc *p = myproc();
-  int numOfKThreads = 0;
-  //acquire(&p->lock); //TODO
+  int found = 0;
+  acquire(&p->lock); //TODO
   for (temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
     acquire(&temp->ktLock);
-    if((temp->ktState != UNUSED) && (temp->ktState != ZOMBIE)){
-      numOfKThreads++;
+    if((temp->ktState != UNUSED) && (temp->ktState != ZOMBIE) && (temp!=kt)){
+      found = 1;
+      release(&temp->ktLock);
+      break;
     }
     release(&temp->ktLock);
   }
-  //release(&p->lock);
-  if(numOfKThreads == 1){
+  release(&p->lock);
+
+  if(found == 0){
     exit(status);
   }
+  
   else{
-    //acquire(&wait_lock);
     acquire(&p->lock);    //TODO
-    wakeup(kt);           
+    
+    wakeup(kt);
 
+    release(&p->lock);
+    
     acquire(&kt->ktLock);
     kt->ktXstate = status;     
     kt->ktState = ZOMBIE;
    
     //release(&wait_lock);
-    release(&p->lock);
+  
     sched();
     panic("zombie exit");
   }
 
 }
+
+
 
 //task2.3
 struct kthread* get_kthread_by_ktid(int ktid){
@@ -923,8 +940,8 @@ int kthread_join(int ktid, uint64 status){
     } 
       
   }
+  return -1;
 }
-
 
 
 //task2.3
@@ -938,12 +955,13 @@ int kthread_get_killed( struct kthread *kt){
 
 void terminate_all_other_kthreads(void){
   struct proc *p = myproc();
-  struct kthread *temp;
+  
   int temp_ktid = 0;
   while(1){
     //acquire(&p->lock);  //TODO
-    for(temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
-    if(mykthread() != temp){
+    temp_ktid = 0;
+    for(struct kthread *temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
+    if((mykthread() != temp) && (temp->ktState != UNUSED) && (temp->ktState != ZOMBIE) && temp!=0){
       acquire(&temp->ktLock);
       temp_ktid = temp->ktId;
       release(&temp->ktLock);
