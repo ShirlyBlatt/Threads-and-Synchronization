@@ -406,7 +406,6 @@ exit(int status)
   //   else{
   //   release(&p->lock);
   // }
-    ls
     if(p == initproc)
       panic("init exiting");
 
@@ -868,7 +867,7 @@ void kthread_exit(int status){
   acquire(&p->lock); //TODO
   for (temp = p->kthread; temp < &p->kthread[NKT] ; temp++){
     acquire(&temp->ktLock);
-    if((temp->ktState != UNUSED) && (temp->ktState != ZOMBIE) && (temp!=kt)){
+    if((temp->ktState != UNUSED) && (temp->ktState != ZOMBIE) && (temp!=mykthread())){
       found = 1;
       release(&temp->ktLock);
       break;

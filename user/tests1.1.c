@@ -47,41 +47,41 @@ int main(int argc, char *argv[]){
     // uthread_create(&hello2, HIGH);
     // uthread_start_all();
     // printf("after all\n");
-    return 0;
-}
+//     return 0;
+// }
 
 //tests kllt
-//     uint64 stack_a = (uint64)malloc(MAX_STACK_SIZE);
-//   uint64 stack_b = (uint64)malloc(MAX_STACK_SIZE);
+  uint64 stack_a = (uint64)malloc(MAX_STACK_SIZE);
+  uint64 stack_b = (uint64)malloc(MAX_STACK_SIZE);
 
-//   int kt_a = kthread_create((void *(*)())thread_start_func, stack_a, MAX_STACK_SIZE);
-//   if(kt_a <= 0){
-//     printf("kthread_create failed\n");
-//     exit(1);
-//   }
-//   printf("after first create");
-//   int kt_b = kthread_create((void *(*)())thread_start_func, stack_b, MAX_STACK_SIZE);
-//   if(kt_a <= 0){
-//     printf("kthread_create failed\n");
-//     exit(1);
-//   }
-//   printf("after second create");
-//   int joined = kthread_join(kt_a, 0);
-//   if(joined != 0){
-//     printf("kthread_join failed\n");
-//     exit(1);
-//   }
-//     printf("after first join");
-//   joined = kthread_join(kt_b, 0);
-//   if(joined != 0){
-//     printf("kthread_join failed\n");
-//     exit(1);
-//   }
-//    printf("after second join");
+  int kt_a = kthread_create((void *(*)())thread_start_func, stack_a, MAX_STACK_SIZE);
+  if(kt_a <= 0){
+    printf("kthread_create failed\n");
+    exit(1);
+  }
+  printf("after first create");
+  int kt_b = kthread_create((void *(*)())thread_start_func, stack_b, MAX_STACK_SIZE);
+  if(kt_a <= 0){
+    printf("kthread_create failed\n");
+    exit(1);
+  }
+  printf("after second create");
+  int joined = kthread_join(kt_a, 0);
+  if(joined != 0){
+    printf("kthread_join failed\n");
+    exit(1);
+  }
+    printf("after first join");
+  joined = kthread_join(kt_b, 0);
+  if(joined != 0){
+    printf("kthread_join failed\n");
+    exit(1);
+  }
+   printf("after second join");
 
-//   free((void *)stack_a);
-//   free((void *)stack_b);
-//   printf("finished");
-// return 0;
-// }
+  free((void *)stack_a);
+  free((void *)stack_b);
+  printf("finished");
+return 0;
+}
 
