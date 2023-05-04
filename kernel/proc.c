@@ -357,7 +357,7 @@ fork(void)
   np->parent = p;
   release(&wait_lock);
 
-  acquire(&np->lock);                 //maybe we dont need ? //TODO //may
+  acquire(&np->lock);                 //maybe we dont need ? //TODO 
   acquire(&np->kthread[0].ktLock);    //task2.2
   np->kthread[0].ktState = RUNNABLE;  //task2.2
   release(&np->kthread[0].ktLock);    //task2.2
@@ -550,7 +550,7 @@ scheduler(void)
     intr_on();
 
     for(p = proc; p < &proc[NPROC]; p++) {
-       if(p->state == USED) { //may
+       if(p->state == USED) { //TODO
         //task2.2
         struct kthread *kt;
         for (kt = p->kthread; kt < &p->kthread[NKT]; kt++){
