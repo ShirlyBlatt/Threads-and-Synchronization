@@ -188,6 +188,7 @@ freeproc(struct proc *p)
   p->name[0] = 0;
   p->killed = 0;
   p->xstate = 0;
+  p->firstThreadExited = 0;
 
   struct kthread *kt;
   for (kt= p->kthread; kt < &p->kthread[NKT]; kt++){ //task2.2
@@ -386,19 +387,26 @@ reparent(struct proc *p)
 void
 exit(int status)
 {
-  //static int firstThreadToExit = 1;
+  //int firstThreadToExit = 1;
   struct proc *p = myproc();
-  //acquire(&p->lock);
-  
- // if(firstThreadToExit){
-  //  firstThreadToExit = 0;
-  //  release(&p->lock);
-    terminate_all_other_kthreads();  //task2.3
+  acquire(&p->lock);
+  // if(p->firstThreadExited == 0){
+  //   p->firstThreadExited = 1;
+  //   release(&p->lock);
+ if(p->firstThreadExited != 0){
+    release(&p->lock);
+    kthread_exit(status);
+ }
+ //if(firstThreadToExit){
+  p->firstThreadExited = 1;
+  release(&p->lock);
+  terminate_all_other_kthreads();  //task2.3
   
   // }
   //   else{
   //   release(&p->lock);
   // }
+    ls
     if(p == initproc)
       panic("init exiting");
 
@@ -443,13 +451,19 @@ exit(int status)
     //struct kthread *kt = mykthread();
     acquire(&mykthread()->ktLock);
     mykthread()->ktState = ZOMBIE;
-    release(&mykthread()->ktLock);
+    //release(&mykthread()->ktLock);
 
     //acquire(&mykthread()->ktLock);  //task 2.2
     
 
     release(&wait_lock);
-    acquire(&mykthread()->ktLock);
+    //acquire(&mykthread()->ktLock);
+  // }
+  //  else{
+  //   release(&p->lock);
+  //   kthread_exit(status);
+  // }
+  
   // }
   // else{
   //   release(&p->lock);
