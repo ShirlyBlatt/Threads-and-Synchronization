@@ -121,6 +121,11 @@ exec(char *path, char **argv)
   release(&p->lock);
   terminate_all_other_kthreads(); //task2.3
 
+  acquire(&p->lock);
+  p->firstThreadExeced = 0;
+  release(&p->lock);
+
+
   // arguments to user main(argc, argv)
   // argc is returned via the system call return
   // value, which goes in a0.
