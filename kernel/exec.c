@@ -110,8 +110,15 @@ exec(char *path, char **argv)
     goto bad;
   if(copyout(pagetable, sp, (char *)ustack, (argc+1)*sizeof(uint64)) < 0)
     goto bad;
-
-
+  
+  //task2.3
+  acquire(&p->lock);
+  if(p->firstThreadExeced != 0){
+    release(&p->lock);
+    kthread_exit(0);
+  }
+  p->firstThreadExeced = 1;
+  release(&p->lock);
   terminate_all_other_kthreads(); //task2.3
 
   // arguments to user main(argc, argv)

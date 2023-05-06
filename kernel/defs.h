@@ -107,7 +107,7 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
-int             kthread_create(uint64, uint64, int ); //task2.3
+int             kthread_create(uint64, uint64, int ); //task2.3 
 int             kthread_id(void);   //task2.3
 int             kthread_kill(int);  //task2.3
 void            kthread_exit(int);  //task2.3

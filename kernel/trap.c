@@ -59,7 +59,6 @@ usertrap(void)
     
     acquire(&kt->ktLock);
     int kt_killed = kt->ktKilled;
-    //int ktid = kt->ktId;     //task2.3
     release(&kt->ktLock);
     if(kt_killed)           //task2.3
       kthread_exit(-1);  //task2.3
@@ -86,7 +85,6 @@ usertrap(void)
   //task2.2
   acquire(&kt->ktLock);
   int kt_killed = kt->ktKilled;
-  //int ktid = kt->ktId;    //task2.3
   release(&kt->ktLock);
   if(kt_killed)          //task2.3
     kthread_exit(-1);  //task2.3
